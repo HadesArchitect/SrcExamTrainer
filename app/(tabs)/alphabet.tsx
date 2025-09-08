@@ -2,37 +2,9 @@ import { StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import * as Speech from 'expo-speech';
 
 import { Text, View } from '@/components/Themed';
+import { phoneticAlphabet } from '@/constants/PhoneticAlphabet';
 
-const phoneticAlphabet = [
-  { letter: 'A', phonetic: 'Alpha' },
-  { letter: 'B', phonetic: 'Bravo' },
-  { letter: 'C', phonetic: 'Charlie' },
-  { letter: 'D', phonetic: 'Delta' },
-  { letter: 'E', phonetic: 'Echo' },
-  { letter: 'F', phonetic: 'Foxtrot' },
-  { letter: 'G', phonetic: 'Golf' },
-  { letter: 'H', phonetic: 'Hotel' },
-  { letter: 'I', phonetic: 'India' },
-  { letter: 'J', phonetic: 'Juliet' },
-  { letter: 'K', phonetic: 'Kilo' },
-  { letter: 'L', phonetic: 'Lima' },
-  { letter: 'M', phonetic: 'Mike' },
-  { letter: 'N', phonetic: 'November' },
-  { letter: 'O', phonetic: 'Oscar' },
-  { letter: 'P', phonetic: 'Papa' },
-  { letter: 'Q', phonetic: 'Quebec' },
-  { letter: 'R', phonetic: 'Romeo' },
-  { letter: 'S', phonetic: 'Sierra' },
-  { letter: 'T', phonetic: 'Tango' },
-  { letter: 'U', phonetic: 'Uniform' },
-  { letter: 'V', phonetic: 'Victor' },
-  { letter: 'W', phonetic: 'Whiskey' },
-  { letter: 'X', phonetic: 'X-ray' },
-  { letter: 'Y', phonetic: 'Yankee' },
-  { letter: 'Z', phonetic: 'Zulu' },
-];
-
-export default function TabTwoScreen() {
+export default function AlphabetScreen() {
   const playPronunciation = (phonetic: string) => {
     Speech.speak(phonetic, {
       language: 'en-US',
@@ -43,9 +15,6 @@ export default function TabTwoScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Phonetic Alphabet</Text>
-      <View style={styles.separator} lightColor="#eee" darkColor="rgba(255,255,255,0.1)" />
-      
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {phoneticAlphabet.map((item) => (
           <View key={item.letter} style={styles.alphabetItem}>
