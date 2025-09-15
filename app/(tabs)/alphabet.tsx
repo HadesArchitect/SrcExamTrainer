@@ -1,10 +1,12 @@
-import { StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { TabView, SceneMap } from 'react-native-tab-view';
+import { useState } from 'react';
 import * as Speech from 'expo-speech';
 
 import { Text, View } from '@/components/Themed';
 import { phoneticAlphabet } from '@/constants/PhoneticAlphabet';
 
-export default function AlphabetScreen() {
+const AlphabetRoute = () => {
   const playPronunciation = (phonetic: string) => {
     Speech.speak(phonetic, {
       language: 'en-US',
@@ -30,6 +32,41 @@ export default function AlphabetScreen() {
         ))}
       </ScrollView>
     </View>
+  );
+};
+
+const PracticeRoute = () => (
+  <View style={styles.container}>
+    <View style={styles.practiceContent}>
+      <Text style={styles.title}>Practice Mode</Text>
+      <Text style={styles.practiceText}>Coming soon - practice exercises will be available here!</Text>
+      <Text style={styles.practiceDescription}>
+        This section will include interactive exercises to help you memorize the phonetic alphabet.
+      </Text>
+    </View>
+  </View>
+);
+
+const renderScene = SceneMap({
+  alphabet: AlphabetRoute,
+  practice: PracticeRoute,
+});
+
+export default function AlphabetScreen() {
+  const layout = useWindowDimensions();
+  const [index, setIndex] = useState(0);
+  const [routes] = useState([
+    { key: 'alphabet', title: 'Alphabet' },
+    { key: 'practice', title: 'Practice' },
+  ]);
+
+  return (
+    <TabView
+      navigationState={{ index, routes }}
+      renderScene={renderScene}
+      onIndexChange={setIndex}
+      initialLayout={{ width: layout.width }}
+    />
   );
 }
 
@@ -90,5 +127,21 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  practiceContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  practiceText: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  practiceDescription: {
+    fontSize: 14,
+    textAlign: 'center',
+    opacity: 0.7,
   },
 });
