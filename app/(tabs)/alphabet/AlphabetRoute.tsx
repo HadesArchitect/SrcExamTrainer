@@ -7,11 +7,15 @@ import { styles } from './styles';
 
 const AlphabetRoute = () => {
   const playPronunciation = (phonetic: string) => {
-    Speech.speak(phonetic, {
-      language: 'en-US',
-      pitch: 1.0,
-      rate: 0.8,
-    });
+    try {
+      Speech.speak(phonetic, {
+        language: 'en-US',
+        pitch: 1.0,
+        rate: 0.8,
+      });
+    } catch (error) {
+      console.warn('Speech synthesis failed:', error); // TODO Replace with user warning
+    }
   };
 
   return (

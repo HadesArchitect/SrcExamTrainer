@@ -10,13 +10,14 @@ const renderScene = SceneMap({
   practice: PracticeRoute,
 });
 
+const routes = [
+  { key: 'alphabet', title: 'Alphabet' },
+  { key: 'practice', title: 'Practice' },
+];
+
 export default function AlphabetScreen() {
   const layout = useWindowDimensions();
   const [index, setIndex] = useState(0);
-  const [routes] = useState([
-    { key: 'alphabet', title: 'Alphabet' },
-    { key: 'practice', title: 'Practice' },
-  ]);
 
   return (
     <TabView
