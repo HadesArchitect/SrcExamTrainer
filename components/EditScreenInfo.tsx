@@ -2,7 +2,6 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 
 import { ExternalLink } from './ExternalLink';
-import { MonoText } from './StyledText';
 import { Text, View } from './Themed';
 
 import Colors from '@/constants/Colors';
@@ -22,7 +21,7 @@ export default function EditScreenInfo({ path }: { path: string }) {
           style={[styles.codeHighlightContainer, styles.homeScreenFilename]}
           darkColor="rgba(255,255,255,0.05)"
           lightColor="rgba(0,0,0,0.05)">
-          <MonoText>{path}</MonoText>
+          <Text style={styles.monoText}>{path}</Text>
         </View>
 
         <Text
@@ -62,6 +61,9 @@ const styles = StyleSheet.create({
     fontSize: 17,
     lineHeight: 24,
     textAlign: 'center',
+  },
+  monoText: {
+    fontFamily: 'SpaceMono',
   },
   helpContainer: {
     marginTop: 15,
