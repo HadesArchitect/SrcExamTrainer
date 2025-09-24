@@ -5,18 +5,32 @@ import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-spe
 import { Text, View } from '@/components/Themed';
 import { phoneticAlphabet } from '@/constants/PhoneticAlphabet';
 import { styles } from './styles';
+import { usePracticeData } from '@/hooks/usePracticeData';
+import { LetterAttempt } from '@/types/storage';
 
 const PracticeRoute = () => {
   const [currentChallenge, setCurrentChallenge] = useState(phoneticAlphabet[0]);
   const [isListening, setIsListening] = useState(false);
-  const [score, setScore] = useState(0);
-  const [totalAttempts, setTotalAttempts] = useState(0);
   const [feedback, setFeedback] = useState('');
   const [recognizing, setRecognizing] = useState(false);
   const [volumeLevel, setVolumeLevel] = useState(0);
   const [isRecognitionAvailable, setIsRecognitionAvailable] = useState(true);
 
-  // Initialize speech recognition
+  // Use the practice data hook for persistent storage
+  const {
+    currentSession,
+    stats,
+    startSession,
+    recordAttempt,
+    endSession,
+    clearData
+  } = usePracticeData();
+
+  // Derived values from current session and stats
+  const score = currentSession?.correctAttempts || 0;
+  const totalAttempts = currentSession?.totalAttempts || 0;
+
+  // Initialize speech recognition and start session
   useEffect(() => {
     const initializeSpeechRecognition = async () => {
       // Check if speech recognition is available
@@ -45,9 +59,31 @@ const PracticeRoute = () => {
       }
     };
     
-    initializeSpeechRecognition();
-    generateNewChallenge();
+    const initialize = async () => {
+      await initializeSpeechRecognition();
+      generateNewChallenge();
+      
+      // Start a new practice session
+      try {
+        await startSession();
+      } catch (error) {
+        console.error('Failed to start session:', error);
+      }
+    };
+    
+    initialize();
   }, []);
+
+  // End session when component unmounts
+  useEffect(() => {
+    return () => {
+      if (currentSession) {
+        endSession().catch(error => {
+          console.error('Failed to end session on unmount:', error);
+        });
+      }
+    };
+  }, [currentSession, endSession]);
 
   // Handle speech recognition events
   useSpeechRecognitionEvent('start', () => {
@@ -162,7 +198,7 @@ const PracticeRoute = () => {
     }
   };
 
-  const checkAnswer = (transcript: string, confidence: number = 0) => {
+  const checkAnswer = async (transcript: string, confidence: number = 0) => {
     const expectedAnswer = currentChallenge.phonetic.toLowerCase();
     const transcriptTrimmed = transcript.trim();
     
@@ -171,13 +207,28 @@ const PracticeRoute = () => {
     const isContainsMatch = transcript.includes(expectedAnswer) || expectedAnswer.includes(transcriptTrimmed);
     const isCloseMatch = calculateSimilarity(transcriptTrimmed, expectedAnswer) > 0.7;
     
-    setTotalAttempts(prev => prev + 1);
+    const isCorrect = isExactMatch || isContainsMatch || isCloseMatch;
+    
+    // Create letter attempt for persistent storage
+    const attempt: LetterAttempt = {
+      letter: currentChallenge.letter,
+      phonetic: currentChallenge.phonetic,
+      transcript: transcript,
+      confidence: confidence,
+      isCorrect: isCorrect,
+      timestamp: new Date()
+    };
+    
+    // Record the attempt
+    try {
+      await recordAttempt(attempt);
+    } catch (error) {
+      console.error('Failed to record attempt:', error);
+    }
     
     if (isExactMatch) {
-      setScore(prev => prev + 1);
       setFeedback(`✅ Perfect! You said "${transcript}" (${Math.round(confidence * 100)}% confidence)`);
     } else if (isContainsMatch || isCloseMatch) {
-      setScore(prev => prev + 1);
       setFeedback(`✅ Good! You said "${transcript}" - close enough to "${currentChallenge.phonetic}"`);
     } else {
       setFeedback(`❌ Not quite. You said "${transcript}", expected "${currentChallenge.phonetic}"`);
@@ -221,11 +272,47 @@ const PracticeRoute = () => {
     return matrix[str2.length][str1.length];
   };
 
-  const resetScore = () => {
-    setScore(0);
-    setTotalAttempts(0);
-    setVolumeLevel(0);
-    generateNewChallenge();
+  const resetScore = async () => {
+    try {
+      // End current session if active
+      if (currentSession) {
+        await endSession();
+      }
+      
+      setVolumeLevel(0);
+      generateNewChallenge();
+      
+      // Start a new session
+      await startSession();
+    } catch (error) {
+      console.error('Failed to reset score:', error);
+    }
+  };
+
+  const handleClearData = async () => {
+    Alert.alert(
+      'Clear All Data',
+      'This will permanently delete all practice sessions and statistics. Are you sure?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await clearData();
+              generateNewChallenge();
+            } catch (error) {
+              console.error('Failed to clear data:', error);
+              Alert.alert('Error', 'Failed to clear data');
+            }
+          },
+        },
+      ]
+    );
   };
 
   // Volume indicator component
@@ -250,9 +337,20 @@ const PracticeRoute = () => {
         
         <View style={styles.scoreContainer}>
           <Text style={styles.scoreText}>
-            Score: {score}/{totalAttempts}
+            Current Session: {score}/{totalAttempts}
             {totalAttempts > 0 && ` (${Math.round((score/totalAttempts) * 100)}%)`}
           </Text>
+          {stats && (
+            <Text style={styles.scoreText}>
+              Overall: {stats.correctAttempts}/{stats.totalAttempts}
+              {stats.totalAttempts > 0 && ` (${Math.round(stats.accuracy * 100)}%)`}
+            </Text>
+          )}
+          {stats && (
+            <Text style={styles.scoreText}>
+              Total Sessions: {stats.totalSessions}
+            </Text>
+          )}
         </View>
 
         <View style={styles.challengeContainer}>
@@ -294,7 +392,11 @@ const PracticeRoute = () => {
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.resetButton} onPress={resetScore}>
-            <Text style={styles.resetButtonText}>Reset Score</Text>
+            <Text style={styles.resetButtonText}>New Session</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.resetButton} onPress={handleClearData}>
+            <Text style={styles.resetButtonText}>Clear Data</Text>
           </TouchableOpacity>
         </View>
       </View>
